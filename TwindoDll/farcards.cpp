@@ -10,6 +10,31 @@
 
 TwindoProto proto;
 
+bool GetCheckSum(const std::string& xml, double &summa) {
+    namespace pt = boost::property_tree;
+    double check_sum = 0;
+
+    std::istringstream istr(xml);
+    try {
+        pt::ptree tree;
+        pt::read_xml(istr, tree);
+        BOOST_FOREACH(pt::ptree::value_type & v, tree.get_child("CHECK.CHECKDATA.CHECKLINES")) {
+            if (v.first == "LINE") {
+                check_sum += boost::lexical_cast<double>(v.second.get<std::string>("<xmlattr>.sum"));
+            }
+        }
+    }
+    catch (const boost::property_tree::xml_parser::xml_parser_error) {
+        proto.error("Invalid check XML");
+        return false;
+    }
+    catch (const boost::property_tree::ptree_error) {
+        // if check empty
+    };
+    summa = check_sum;
+    return true;
+}
+
 extern "C" FARCARDS_API int TransactionsEx(
     Word count,
     transaction_t * list[],
@@ -20,10 +45,16 @@ extern "C" FARCARDS_API int TransactionsEx(
     DWORD * out_len,
     Word * out_kind
 ) {
-    proto.trace(std::string{ inp_buf, inp_len });
+    std::string xml(inp_buf, inp_len);
+
+    double summa = 0;
+
+    if (!GetCheckSum(xml, summa)) {
+        return 1;
+    }
 
     Int64 card = 0;
-    unsigned long long tr_sum = 0;
+    double tr_sum = 0;
 
     for (Word i = 0; i < count; i++) {
         transaction_t *tr = list[i];
@@ -44,6 +75,16 @@ extern "C" FARCARDS_API int TransactionsEx(
         }
     }
 
+    std::string code;
+
+    if (!proto.setUser(card, code)) {
+        return 1;
+    }
+
+    if (!proto.commit(code, summa/100, tr_sum/100)) {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -54,7 +95,7 @@ extern "C" FARCARDS_API void Init() {
 extern "C" FARCARDS_API void Done() {
 }
 
-void convertToMB(const std::wstring& from, const size_t len, char* buffer) {
+void ConvertToMB(const std::wstring& from, const size_t len, char* buffer) {
 
     int buf_len = WideCharToMultiByte(1251, 0, from.c_str(), -1, NULL, 0, NULL, NULL);
     
@@ -89,27 +130,9 @@ extern "C" FARCARDS_API int GetCardInfoEx(
 
     double check_sum = 0;
     if (inp_len > 0) {
-
-        proto.trace(std::string{ inp_buf, inp_len });
-
-        namespace pt = boost::property_tree;
-        std::istringstream istr(std::string{ inp_buf, inp_len });
-        try {
-            pt::ptree tree;
-            pt::read_xml(istr, tree);
-            BOOST_FOREACH(pt::ptree::value_type & v, tree.get_child("CHECK.CHECKDATA.CHECKLINES")) {
-                if (v.first == "LINE") {
-                    check_sum += boost::lexical_cast<double>(v.second.get<std::string>("<xmlattr>.sum"));
-                }
-            }
-        }
-        catch (const boost::property_tree::xml_parser::xml_parser_error) {
-            proto.error("Invalid check XML");
+        if (!GetCheckSum(std::string(inp_buf, inp_len), check_sum)) {
             return 1;
         }
-        catch (const boost::property_tree::ptree_error) {
-            // if check empty
-        };
     }
 
     if (check_sum == 0) {
@@ -137,13 +160,13 @@ extern "C" FARCARDS_API int GetCardInfoEx(
         }
     }
 
-    convertToMB(HttpProto::utf8_to_wstring(name), sizeof(info->owner_name), info->owner_name);
+    ConvertToMB(HttpProto::utf8_to_wstring(name), sizeof(info->owner_name), info->owner_name);
 
     info->avail_for_account = allowed_in_currency * 100;
 
     std::wstringstream screen_info;
     screen_info << L"Для оплаты:" << allowed_in_currency << L" Всего:" << balance << L" лайков";
-    convertToMB(screen_info.str(), sizeof(info->card_screen_info), info->card_screen_info);
+    ConvertToMB(screen_info.str(), sizeof(info->card_screen_info), info->card_screen_info);
 
     return 0;
 };

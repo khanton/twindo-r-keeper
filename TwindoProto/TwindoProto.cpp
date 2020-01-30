@@ -119,7 +119,7 @@ bool TwindoProto::get(const std::string& user, std::string& name)
     return false;
 }
 
-bool TwindoProto::balance(const std::string& name, const double summa, unsigned long& balance, unsigned long& allowed, unsigned long& allowed_in_currency)
+bool TwindoProto::balance(const std::string& user, const double summa, unsigned long& balance, unsigned long& allowed, unsigned long& allowed_in_currency)
 {
     HttpProto api(HttpProto::utf8_to_wstring(config.api_path));
 
@@ -140,7 +140,7 @@ bool TwindoProto::balance(const std::string& name, const double summa, unsigned 
     DWORD rcode = api.post(HttpProto::utf8_to_wstring(url), ostr.str(), response);
 
     if (rcode < 200 || rcode > 299) {
-        BOOST_LOG_TRIVIAL(error) << "Card balance error! code=" << rcode;
+        BOOST_LOG_TRIVIAL(error) << "Card response error! code=" << rcode;
         return false;
     }
 
@@ -153,7 +153,7 @@ bool TwindoProto::balance(const std::string& name, const double summa, unsigned 
         allowed = pt.get<unsigned long>("allowed");
         allowed_in_currency = pt.get<unsigned long>("allowed_in_currency");
         
-        BOOST_LOG_TRIVIAL(trace) << "Card response success! user=" << user 
+        BOOST_LOG_TRIVIAL(trace) << "Card request success! user=" << user 
                 << ", check summa=" << summa 
                 << ", balance=" << balance 
                 << ", allowed=" << allowed
@@ -169,7 +169,7 @@ bool TwindoProto::balance(const std::string& name, const double summa, unsigned 
     return false;
 }
 
-bool TwindoProto::commit(const std::string& user, const double summa)
+bool TwindoProto::commit(const std::string& user, const double summa, const double writeoff_sum)
 {
     HttpProto api(HttpProto::utf8_to_wstring(config.api_path));
 
@@ -178,20 +178,47 @@ bool TwindoProto::commit(const std::string& user, const double summa)
 
     std::string response;
 
-    BOOST_LOG_TRIVIAL(info) << "Card commit url='" << config.api_path << url << "', user=" << user << ", place=" << config.place << ", summa=" << summa;
+    BOOST_LOG_TRIVIAL(info) << "Card commit url='" << config.api_path << url 
+        << "', user=" << user 
+        << ", place=" << config.place 
+        << ", ordersum=" << summa
+        << ", writeof_sum=" << summa
+        ;
 
     std::string buf;
 
     std::ostringstream ostr(buf);
-    ostr << "{ \"ordersum\": " << std::fixed << std::setprecision(0) << summa << "}";
+    ostr << "{ \"ordersum\": " << std::fixed << std::setprecision(0) << summa 
+                << ", \"writeoff_sum\":" << writeoff_sum << " }";
 
     api.addHeader(L"Content-Type", L"application/json");
 
     DWORD rcode = api.post(HttpProto::utf8_to_wstring(url), ostr.str(), response);
 
     if (rcode < 200 || rcode > 299) {
-        BOOST_LOG_TRIVIAL(error) << "Card balance error! code=" << rcode;
+        BOOST_LOG_TRIVIAL(error) << "Card response error! code=" << rcode;
         return false;
+    }
+
+    try {
+        boost::property_tree::ptree pt;
+        std::stringstream resp(response);
+        boost::property_tree::json_parser::read_json(resp, pt);
+
+        std::string ret = pt.get("status","error");
+        unsigned int count = pt.get<unsigned int>("count", 0);
+
+        if (ret == "OK") {
+
+            BOOST_LOG_TRIVIAL(trace) << "Commit success! user=" << user << ", count=" << count;
+
+            return true;
+        }
+
+        BOOST_LOG_TRIVIAL(error) << "Commit error! json='" << response << "'";
+    }
+    catch (const boost::property_tree::json_parser::json_parser_error & error) {
+        BOOST_LOG_TRIVIAL(error) << "Response parse error='" << error.what() << "', json='" << response << "'";
     }
 
 	return false;
