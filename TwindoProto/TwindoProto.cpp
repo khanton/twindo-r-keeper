@@ -107,7 +107,7 @@ bool TwindoProto::get(const std::string& user, std::string& name)
         // TODO: Check currency for multicyrrency system
    
         if (!user_name.empty()) {
-            BOOST_LOG_TRIVIAL(trace) << "Card request return name='" << user_name;
+            BOOST_LOG_TRIVIAL(trace) << "Card request return name='" << user_name <<"'";
             name = user_name;
             return true;
         }

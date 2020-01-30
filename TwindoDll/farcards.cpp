@@ -113,7 +113,7 @@ extern "C" FARCARDS_API int GetCardInfoEx(
     }
 
     if (check_sum == 0) {
-        proto.error("Check sum zero!");
+        proto.trace("Check sum zero!");
     }
 
     std::string code;
@@ -144,17 +144,6 @@ extern "C" FARCARDS_API int GetCardInfoEx(
     std::wstringstream screen_info;
     screen_info << L"Для оплаты:" << allowed_in_currency << L" Всего:" << balance << L" лайков";
     convertToMB(screen_info.str(), sizeof(info->card_screen_info), info->card_screen_info);
-
-/*    std::wstringstream card_info;
-    screen_info << L"Оплата по счету " << balance << L" лайков";
-    convertToMB(card_info.str(), sizeof(info->card_info), info->card_info);
-
-    std::wstringstream print_info;
-    screen_info << L"Печать " << balance << L" лайков";
-    convertToMB(print_info.str(), sizeof(info->card_printer_info), info->card_printer_info);
-*/
-
-//    info->account_number = card;
 
     return 0;
 };
