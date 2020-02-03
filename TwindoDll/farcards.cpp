@@ -81,7 +81,7 @@ extern "C" FARCARDS_API int TransactionsEx(
         return 1;
     }
 
-    if (!proto.commit(code, summa/100, tr_sum/100)) {
+    if (!proto.commit(code, summa, tr_sum/100)) {
         return 1;
     }
 
@@ -165,7 +165,7 @@ extern "C" FARCARDS_API int GetCardInfoEx(
     info->avail_for_account = allowed_in_currency * 100;
 
     std::wstringstream screen_info;
-    screen_info << L"Для оплаты:" << allowed_in_currency << L"руб. Всего:" << balance << L" лайков";
+    screen_info << L"Для оплаты:" << allowed_in_currency << L" руб.\nВсего:" << balance << L" лайков";
     ConvertToMB(screen_info.str(), sizeof(info->card_screen_info), info->card_screen_info);
 
     return 0;

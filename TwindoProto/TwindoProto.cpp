@@ -153,7 +153,7 @@ bool TwindoProto::balance(const std::string& user, const double summa, unsigned 
         allowed = pt.get<unsigned long>("allowed");
         allowed_in_currency = pt.get<unsigned long>("allowed_in_currency");
         
-        BOOST_LOG_TRIVIAL(trace) << "Card request success! user=" << user 
+        BOOST_LOG_TRIVIAL(info) << "Card request success! user=" << user 
                 << ", check summa=" << summa 
                 << ", balance=" << balance 
                 << ", allowed=" << allowed
@@ -210,7 +210,7 @@ bool TwindoProto::commit(const std::string& user, const double summa, const doub
 
         if (ret == "OK") {
 
-            BOOST_LOG_TRIVIAL(trace) << "Commit success! user=" << user << ", count=" << count;
+            BOOST_LOG_TRIVIAL(info) << "Commit success! user=" << user << ", count=" << count;
 
             return true;
         }
