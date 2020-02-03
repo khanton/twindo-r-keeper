@@ -165,7 +165,7 @@ extern "C" FARCARDS_API int GetCardInfoEx(
     info->avail_for_account = allowed_in_currency * 100;
 
     std::wstringstream screen_info;
-    screen_info << L"Для оплаты:" << allowed_in_currency << L" Всего:" << balance << L" лайков";
+    screen_info << L"Для оплаты:" << allowed_in_currency << L"руб. Всего:" << balance << L" лайков";
     ConvertToMB(screen_info.str(), sizeof(info->card_screen_info), info->card_screen_info);
 
     return 0;
