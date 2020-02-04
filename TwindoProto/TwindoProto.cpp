@@ -169,7 +169,7 @@ bool TwindoProto::balance(const std::string& user, const double summa, unsigned 
     return false;
 }
 
-bool TwindoProto::commit(const std::string& user, const double summa, const double writeoff_sum)
+bool TwindoProto::commit(const std::string& user, const double summa, const double writeoff_sum, const std::string &info)
 {
     HttpProto api(HttpProto::utf8_to_wstring(config.api_path));
 
@@ -185,11 +185,11 @@ bool TwindoProto::commit(const std::string& user, const double summa, const doub
         << ", writeof_sum=" << summa
         ;
 
-    std::string buf;
-
-    std::ostringstream ostr(buf);
+    std::ostringstream ostr;
     ostr << "{ \"ordersum\": " << std::fixed << std::setprecision(0) << summa 
-                << ", \"writeoff_sum\":" << writeoff_sum << " }";
+                << ", \"writeoff_sum\":" << writeoff_sum 
+                << ", \"cashdesk_info\":" << info 
+        << " }";
 
     api.addHeader(L"Content-Type", L"application/json");
 

@@ -2,16 +2,19 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <sstream>
 
 #include "farcards.h"
 #include "TwindoProto.h"
 #include "HttpProto.h"
 
+namespace pt = boost::property_tree;
+
 TwindoProto proto;
 
 bool GetCheckSum(const std::string& xml, double &summa) {
-    namespace pt = boost::property_tree;
+    
     double check_sum = 0;
 
     std::istringstream istr(xml);
@@ -32,6 +35,26 @@ bool GetCheckSum(const std::string& xml, double &summa) {
         // if check empty
     };
     summa = check_sum;
+    return true;
+}
+
+
+bool GetCheckInfo(const std::string& xml, pt::ptree &info) {
+
+    std::istringstream istr(xml);
+    try {
+        pt::ptree tree;
+        pt::read_xml(istr, tree);
+        info.put("restaurant", tree.get_child("CHECK").get<std::string>("<xmlattr>.restaurantcode"));
+        info.put("station", tree.get_child("CHECK").get<std::string>("<xmlattr>.stationcode"));
+        info.put("check", tree.get_child("CHECK.CHECKDATA").get<std::string>("<xmlattr>.checknum"));
+        info.put("type", "r-keeper");
+    }
+    catch (const boost::property_tree::xml_parser::xml_parser_error) {
+        proto.error("Invalid check XML");
+        return false;
+    }
+
     return true;
 }
 
@@ -75,13 +98,22 @@ extern "C" FARCARDS_API int TransactionsEx(
         }
     }
 
+    pt::ptree pt;
+
+    if (!GetCheckInfo(xml, pt)) {
+        return 1;
+    }
+
+    std::ostringstream ss;
+    boost::property_tree::json_parser::write_json(ss, pt);
+
     std::string code;
 
     if (!proto.setUser(card, code)) {
         return 1;
     }
 
-    if (!proto.commit(code, summa, tr_sum/100)) {
+    if (!proto.commit(code, summa, tr_sum/100, ss.str())) {
         return 1;
     }
 
@@ -133,10 +165,6 @@ extern "C" FARCARDS_API int GetCardInfoEx(
         if (!GetCheckSum(std::string(inp_buf, inp_len), check_sum)) {
             return 1;
         }
-    }
-
-    if (check_sum == 0) {
-        proto.trace("Check sum zero!");
     }
 
     std::string code;
